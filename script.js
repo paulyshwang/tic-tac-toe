@@ -9,8 +9,7 @@ function GameBoard() {
   const moves = [];
   let winner = "";
 
-  // Eventually use this method to render UI
-  // const getBoard = () => board;
+  const getBoard = () => board;
 
   const isValidMove = (row, column) => {
     if (row < 0 || row >= n || column < 0 || column >= n) {
@@ -22,7 +21,7 @@ function GameBoard() {
     };
     
     return true;
-  }
+  };
 
   const placeMarker = (row, column, marker) => {
     board[row][column] = marker;
@@ -52,10 +51,10 @@ function GameBoard() {
         || Math.abs(antidiagonal) === n
       ) {
         if (player === 1) {
-          winner = "Player 1 wins!"
+          winner = "Player 1 wins!";
           return;
         } else {
-          winner = "Player 2 wins!"
+          winner = "Player 2 wins!";
           return;
         };
       };
@@ -66,22 +65,28 @@ function GameBoard() {
     if (moves.length === n * n) {
       winner = "Draw!";
       return;
-    }
+    };
   };
 
   const getWinner = () => winner;
 
-  // Print board to console (unnecessary after UI)
-  const printBoard = () => {
-    console.log(board);
-  };
+  const clearBoard = () => {
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        board[i][j] = " ";
+      };
+    };
+
+    moves.length = 0;
+    winner = "";
+  }
 
   return {
-    // getBoard,
+    getBoard,
     isValidMove,
     placeMarker,
     getWinner,
-    printBoard
+    clearBoard
   };
 }
 
@@ -101,43 +106,90 @@ function GameController() {
 
   let activePlayer = players[0];
 
-  // Eventually use this method to expose activePlayer to UI
-  // const getActivePlayer = () => activePlayer;
-
+  const getActivePlayer = () => activePlayer;
   const switchActivePlayer = () => {
     activePlayer = activePlayer === players[0] ? players[1] : players[0];
   };
+  const resetActivePlayer = () => activePlayer = players[0];
 
   const playRound = (row, column) => {
-    // Make sure game isn't over
-    if (board.getWinner()) {
-      console.log("GAME OVER");
-      return;
-    }
-
-    // Make sure move is legal, then place marker and print board
+    // Make sure move is legal, then place marker and switch active player
     if (board.isValidMove(row, column)) {
       board.placeMarker(row, column, activePlayer.marker);
-      board.printBoard();
-
-      // If winner exists after last move, print winner, else switch player turn
-      if (board.getWinner()) {
-        console.log(board.getWinner());
-      } else {
-        switchActivePlayer();
-        console.log(`${activePlayer.name}'s turn.`)
-      }
-    }
+      switchActivePlayer();
+    };
   };
 
-  // Initial play game message
-  board.printBoard();
-  console.log(`${activePlayer.name}'s turn.`)
-
   return {
-    // getActivePlayer,
-    playRound
+    getActivePlayer,
+    resetActivePlayer,
+    playRound,
+    getBoard: board.getBoard,
+    getWinner: board.getWinner,
+    clearBoard: board.clearBoard
   };
 }
 
-const game = GameController();
+function DisplayController() {
+  const game = GameController();
+  const boardDiv = document.querySelector(".board");
+  const messageDiv = document.querySelector(".message");
+  const restartButton = document.querySelector(".restart");
+  
+  restartButton.addEventListener("click", () => {
+    game.clearBoard();
+    game.resetActivePlayer();
+
+    updateDisplay();
+  });
+
+  const updateDisplay = () => {
+    // Clear board div
+    boardDiv.textContent = "";
+
+    // Get most recent board, active player, and win status
+    const board = game.getBoard();
+    const activePlayer = game.getActivePlayer();
+    const winner = game.getWinner();
+
+    if (winner) {
+      // Display board with inactive cells
+      board.forEach((row) => {
+        row.forEach((column) => {
+          const cellButton = document.createElement("button");
+          cellButton.classList.add("inactive-cell");
+          cellButton.textContent = column;
+  
+          boardDiv.appendChild(cellButton);
+        });
+      });
+
+      // Announce winner
+      messageDiv.textContent = winner;
+    } else {
+      // Display board with active cells
+      board.forEach((row, rowIndex) => {
+        row.forEach((column, columnIndex) => {
+          const cellButton = document.createElement("button");
+          cellButton.classList.add("cell");
+          cellButton.textContent = column;
+
+          cellButton.addEventListener("click", () => {
+            game.playRound(rowIndex, columnIndex);
+            updateDisplay();
+          });
+
+          boardDiv.appendChild(cellButton);
+        });
+      });
+
+      // Announce player turn
+      messageDiv.textContent = `${activePlayer.name}'s turn.`;
+    };
+  };
+
+  // Initial render
+  updateDisplay();
+}
+
+DisplayController();
